@@ -10,6 +10,8 @@ const COMFYUI_ENDPOINT = process.env.COMFYUI_ENDPOINT ?? 'http://localhost:8188'
 const ASSISTENTE_URL = process.env.ASSISTENTE_PESSOAL_BASE_URL ?? 'https://jarvis.laytech.com.br';
 const RUN_LIVE_GENERATION = process.env.RUN_LIVE_GENERATION === 'true';
 
+const LIVE_TEST_MODEL = process.env.LIVE_TEST_MODEL ?? 'DreamShaper_8_pruned.safetensors';
+
 describe('Real Host Integration (ComfyUI + AssistentePessoal + FFmpeg)', () => {
   it('verifies AssistentePessoal health endpoint is healthy', async () => {
     const config = loadConfig({
@@ -95,16 +97,19 @@ describe('Real Host Integration (ComfyUI + AssistentePessoal + FFmpeg)', () => {
         const res = await skill.execute({
           action: 'generate-image',
           params: {
-            prompt: 'minimalist geometric glass cube on a white studio table, soft lighting',
-            model: 'flux1-dev-q4_k_m.gguf',
+            prompt: 'minimalist geometric glass cube on a white studio table, soft lighting, 8k',
+            model: LIVE_TEST_MODEL,
             width: 512,
             height: 512,
-            steps: 4,
+            steps: LIVE_TEST_MODEL.includes('schnell') ? 4 : 15,
             seed: 42,
           },
           context: { projectId: 'live_e2e_test' },
         });
 
+        if (!res.success) {
+          throw new Error(`Live generation failed: ${JSON.stringify(res.error)}`);
+        }
         expect(res.success).toBe(true);
         const assets = res.data as Array<{ id: string; absolutePath: string; sizeBytes: number }>;
         expect(assets.length).toBeGreaterThan(0);

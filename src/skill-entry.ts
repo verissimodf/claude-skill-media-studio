@@ -1,5 +1,6 @@
 import { pathToFileURL } from 'node:url';
-import { loadConfig, type SkillConfig } from './config/schema.js';
+import { z } from 'zod';
+import { loadConfig, SocialPlatformSchema, type SkillConfig } from './config/schema.js';
 import { AssistentePessoalClient } from './lib/assistente-pessoal-client.js';
 import { PipelineOrchestrator } from './lib/pipeline/orchestrator.js';
 import { ServiceDiscovery } from './lib/service-discovery.js';
@@ -12,6 +13,75 @@ import type {
   SkillRequest,
   SkillResponse,
 } from './types/index.js';
+
+const SafePromptSchema = z
+  .string()
+  .min(1)
+  .max(4000)
+  .refine((v) => !v.includes('\0'), 'Null bytes are not allowed in prompt');
+
+const GenerateImageParamsSchema = z.object({
+  prompt: SafePromptSchema,
+  negativePrompt: z.string().max(2000).optional(),
+  model: z.string().min(1).max(255).optional(),
+  width: z.number().int().min(64).max(4096).optional(),
+  height: z.number().int().min(64).max(4096).optional(),
+  steps: z.number().int().min(1).max(150).optional(),
+  cfg: z.number().min(0.1).max(30).optional(),
+  seed: z.number().int().min(0).optional(),
+  batchSize: z.number().int().min(1).max(8).optional(),
+  sampler: z.string().min(1).max(64).optional(),
+  scheduler: z.string().min(1).max(64).optional(),
+  inputAssetId: z.string().min(1).max(128).optional(),
+  denoise: z.number().min(0).max(1).optional(),
+  workflow: z.record(z.string(), z.unknown()).optional(),
+});
+
+const GenerateVideoParamsSchema = z.object({
+  prompt: SafePromptSchema,
+  negativePrompt: z.string().max(2000).optional(),
+  model: z.string().min(1).max(255).optional(),
+  inputAssetId: z.string().min(1).max(128).optional(),
+  width: z.number().int().min(64).max(2048).optional(),
+  height: z.number().int().min(64).max(2048).optional(),
+  fps: z.number().int().min(1).max(60).optional(),
+  duration: z.number().min(0.5).max(30).optional(),
+  steps: z.number().int().min(1).max(150).optional(),
+  cfg: z.number().min(0.1).max(30).optional(),
+  seed: z.number().int().min(0).optional(),
+  sampler: z.string().min(1).max(64).optional(),
+  scheduler: z.string().min(1).max(64).optional(),
+  workflow: z.record(z.string(), z.unknown()).optional(),
+});
+
+const AssembleVideoParamsSchema = z.object({
+  type: z.enum(['shorts', 'reels', 'tiktok', 'standard']).optional(),
+  clips: z
+    .array(
+      z.object({
+        assetId: z.string().min(1).max(128),
+        startSec: z.number().min(0).optional(),
+        durationSec: z.number().positive().optional(),
+      }),
+    )
+    .min(1)
+    .max(50),
+  aspectRatio: z.string().regex(/^\d+:\d+$/).optional(),
+  resolution: z.string().regex(/^\d+x\d+$/).optional(),
+  fps: z.number().int().min(1).max(60).optional(),
+  audioAssetId: z.string().min(1).max(128).optional(),
+  subtitleText: z.string().max(4000).optional(),
+  outputFilename: z.string().min(1).max(128).optional(),
+});
+
+const PublishParamsSchema = z.object({
+  assetId: z.string().min(1).max(128),
+  platforms: z.array(SocialPlatformSchema).min(1),
+  caption: z.string().min(1).max(4000),
+  hashtags: z.array(z.string().min(1).max(64)).max(30).optional(),
+  scheduledAt: z.string().datetime().optional(),
+  title: z.string().max(200).optional(),
+});
 
 export class MediaStudioSkill {
   readonly config: SkillConfig;
@@ -58,28 +128,32 @@ export class MediaStudioSkill {
           break;
         }
         case 'generate-image': {
+          const validated = GenerateImageParamsSchema.parse(params);
           data = await this.orchestrator.generateImage(
-            params as unknown as GenerateImageParams,
+            validated as GenerateImageParams,
             request.context,
           );
           break;
         }
         case 'generate-video': {
+          const validated = GenerateVideoParamsSchema.parse(params);
           data = await this.orchestrator.generateVideo(
-            params as unknown as GenerateVideoParams,
+            validated as GenerateVideoParams,
             request.context,
           );
           break;
         }
         case 'assemble-video': {
+          const validated = AssembleVideoParamsSchema.parse(params);
           data = await this.orchestrator.assembleVideo(
-            params as unknown as AssembleVideoParams,
+            validated as AssembleVideoParams,
             request.context,
           );
           break;
         }
         case 'publish': {
-          data = await this.orchestrator.publish(params as unknown as PublishParams);
+          const validated = PublishParamsSchema.parse(params);
+          data = await this.orchestrator.publish(validated as PublishParams);
           break;
         }
         case 'list-assets': {
@@ -87,14 +161,12 @@ export class MediaStudioSkill {
           break;
         }
         case 'get-asset': {
-          const id = String(params.assetId ?? '');
-          if (!id) throw new Error('assetId is required');
+          const id = z.string().min(1).max(128).parse(params.assetId);
           data = await this.storage.getAsset(id);
           break;
         }
         case 'delete-asset': {
-          const id = String(params.assetId ?? '');
-          if (!id) throw new Error('assetId is required');
+          const id = z.string().min(1).max(128).parse(params.assetId);
           data = { deleted: await this.storage.deleteAsset(id) };
           break;
         }

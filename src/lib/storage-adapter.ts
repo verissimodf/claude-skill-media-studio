@@ -118,7 +118,8 @@ export class LocalStorageAdapter {
     const relativePath = path.join(category, storedName);
     const absolutePath = path.resolve(this.basePath, relativePath);
 
-    if (!absolutePath.startsWith(this.basePath)) {
+    const relCheck = path.relative(this.basePath, absolutePath);
+    if (relCheck.startsWith('..') || path.isAbsolute(relCheck)) {
       throw new Error('Path traversal attempt blocked');
     }
 
