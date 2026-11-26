@@ -4,20 +4,11 @@
 
 FROM node:26-alpine AS base
 
-RUN apk add --no-cache \
-    ffmpeg \
-    git \
-    python3 \
-    make \
-    g++ \
-    vips-dev \
-    && rm -rf /var/cache/apk/*
-
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml* ./
 
-RUN corepack enable pnpm && (pnpm install --frozen-lockfile || pnpm install)
+RUN npm install -g pnpm@10 && (pnpm install --frozen-lockfile || pnpm install)
 
 COPY src ./src
 COPY config ./config
@@ -44,10 +35,10 @@ COPY --from=base /app/dist ./dist
 COPY --from=base /app/package.json ./
 COPY --from=base /app/config ./config
 
-RUN addgroup -g 1000 -S skilluser && \
-    adduser -u 1000 -S skilluser -G skilluser && \
+RUN addgroup -g 1001 -S skilluser && \
+    adduser -u 1001 -S skilluser -G skilluser && \
     mkdir -p /data/skill /data/comfyui/output /data/comfyui/input /data/ffmpeg/temp && \
-    chown -R skilluser:skilluser /app /data
+    chown -R skilluser:skilluser /data
 
 USER skilluser
 
