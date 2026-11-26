@@ -1,6 +1,6 @@
 {
   "name": "claude-skill-media-studio",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Claude Skill para geração de imagens/vídeos (ComfyUI) + montagem (FFmpeg) + publicação social (AssistentePessoal)",
   "type": "module",
   "main": "dist/skill-entry.js",
@@ -13,14 +13,16 @@
     "build": "tsc",
     "dev": "tsx watch src/skill-entry.ts",
     "start": "node dist/skill-entry.js",
-    "lint": "eslint src --ext .ts",
-    "lint:fix": "eslint src --ext .ts --fix",
+    "lint": "eslint src tests",
+    "lint:fix": "eslint src tests --fix",
+    "security:audit": "pnpm audit --audit-level=high",
     "test": "vitest run",
     "test:unit": "vitest run --config vitest.unit.config.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "scan": "./scripts/host-scan.sh",
     "scan:json": "./scripts/host-scan.sh --json",
     "verify": "./scripts/verify-requirements.sh",
+    "verify:models": "./scripts/verify-models.sh",
     "setup:volumes": "./scripts/setup-volumes.sh",
     "test:e2e": "./scripts/test-integration.sh",
     "docker:build": "docker build -f docker/Dockerfile.skill -t claude-skill-media-studio .",
@@ -43,26 +45,27 @@
   "author": "verissimodf",
   "license": "MIT",
   "engines": {
-    "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
+    "node": ">=26.0.0",
+    "pnpm": ">=10.0.0"
   },
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@10.6.2",
   "dependencies": {
-    "axios": "^1.7.0",
-    "form-data": "^4.0.0",
-    "mime-types": "^2.1.35",
-    "zod": "^3.22.0"
+    "axios": "^1.21.1",
+    "form-data": "^4.0.6",
+    "mime-types": "^3.0.2",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/mime-types": "^2.1.4",
-    "@types/node": "^20.12.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "eslint": "^8.57.0",
-    "husky": "^9.0.0",
-    "lint-staged": "^15.0.0",
-    "tsx": "^4.7.0",
-    "typescript": "^5.4.0",
-    "vitest": "^1.5.0"
+    "@eslint/js": "^10.0.1",
+    "@types/mime-types": "^3.0.1",
+    "@types/node": "^26.6.11",
+    "eslint": "^10.15.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.2",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.74.0",
+    "vite": "^7.0.0",
+    "vitest": "^5.1.2"
   }
 }

@@ -6,17 +6,20 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 env:
-  NODE_VERSION: '20'
-  PNPM_VERSION: '9'
+  NODE_VERSION: '26'
+  PNPM_VERSION: '10'
 
 jobs:
   lint-and-typecheck:
-    name: Lint & TypeCheck
+    name: Lint, TypeCheck & Security Audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
@@ -26,13 +29,14 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm build
+      - run: pnpm security:audit
 
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
@@ -41,23 +45,6 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:unit
-
-  integration-tests:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    if: false  # Habilitar quando tiver runners com GPU
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
-        with:
-          version: ${{ env.PNPM_VERSION }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - run: pnpm install --frozen-lockfile
-      - name: Start ComfyUI (mock)
-        run: echo "TODO: subir ComfyUI mock para testes"
-      - run: pnpm test:integration
 
   docker-build:
     name: Docker Build
@@ -69,16 +56,18 @@ jobs:
           docker build -f docker/Dockerfile.skill -t claude-skill-media-studio:test .
       - name: Test Docker image
         run: |
-          docker run --rm --entrypoint node claude-skill-media-studio:test -e "console.log('OK')"
+          docker run --rm --entrypoint node claude-skill-media-studio:test -e "console.log('OK', process.version)"
 
   release:
     name: Release
     runs-on: ubuntu-latest
     needs: [lint-and-typecheck, unit-tests, docker-build]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
@@ -88,12 +77,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm pack
-      - name: Publish to npm
-        run: npm publish ./*.tgz
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: ./*.tgz
           generate_release_notes: true

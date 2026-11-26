@@ -59,9 +59,9 @@ echo "╚═══════════════════════�
 echo
 
 echo "--- Runtime ---"
-check_version "Node.js" "node" "18.0.0"
-check_version "pnpm" "pnpm" "8.0.0"
-check_version "TypeScript" "tsc" "5.0.0"
+check_version "Node.js" "node" "26.0.0"
+check_version "pnpm" "pnpm" "10.0.0"
+check_version "TypeScript" "tsc" "5.9.0"
 
 echo
 echo "--- Ferramentas de Sistema ---"

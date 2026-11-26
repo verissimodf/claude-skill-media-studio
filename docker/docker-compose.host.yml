@@ -33,7 +33,12 @@ services:
       - ASSISTENTE_PESSOAL_BASE_URL=${ASSISTENTE_PESSOAL_BASE_URL:-https://jarvis.laytech.com.br}
       - ASSISTENTE_PESSOAL_API_KEY=${ASSISTENTE_PESSOAL_API_KEY:-}
       - REDIS_URL=redis://skill-redis:6379
-      - DATABASE_URL=postgresql://skill:${POSTGRES_PASSWORD:-skill_secure_password}@skill-postgres:5432/skill_media
+      - DATABASE_URL=postgresql://skill:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@skill-postgres:5432/skill_media
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
     volumes:
       - ${HOST_DATA_ROOT:-/opt/laytech-ai/volumes}/skill:/data/skill
       - ${COMFYUI_VOLUMES_ROOT:-/opt/laytech-ai/volumes/comfyui}/output:/data/comfyui/output:ro
@@ -57,7 +62,7 @@ services:
     image: yanwk/comfyui-boot:cu124-slim
     container_name: comfyui-skill-standalone
     environment:
-      - CLI_ARGS=--listen 0.0.0.0 --port 8188 --preview-method auto
+      - CLI_ARGS=--listen 0.0.0.0 --port 8188 --preview-method auto --reserve-vram 5.5
     volumes:
       - ${COMFYUI_VOLUMES_ROOT:-/opt/laytech-ai/volumes/comfyui}/models:/root/ComfyUI/models
       - ${COMFYUI_VOLUMES_ROOT:-/opt/laytech-ai/volumes/comfyui}/output:/root/ComfyUI/output
@@ -107,7 +112,9 @@ services:
     environment:
       - POSTGRES_DB=skill_media
       - POSTGRES_USER=skill
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-skill_secure_password}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - ${HOST_DATA_ROOT:-/opt/laytech-ai/volumes}/skill-postgres:/var/lib/postgresql/data
     ports:

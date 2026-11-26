@@ -1,39 +1,25 @@
 # =============================================================================
-# Dockerfile.skill — Container para a skill
+# Dockerfile.skill — Container hardened (Node 26 Alpine, non-root) para a skill
 # =============================================================================
 
-FROM node:20-alpine AS base
-
-# Instalar dependências de sistema
-RUN apk add --no-cache \
-    ffmpeg \
-    git \
-    python3 \
-    make \
-    g++ \
-    vips-dev \
-    && rm -rf /var/cache/apk/*
+FROM node:26-alpine AS base
 
 WORKDIR /app
 
-# Copiar package files
 COPY package.json pnpm-lock.yaml* ./
 
-# Instalar pnpm e dependências
-RUN corepack enable pnpm && pnpm install --frozen-lockfile || pnpm install
+RUN npm install -g pnpm@10 && (pnpm install --frozen-lockfile || pnpm install)
 
-# Copiar fonte
 COPY src ./src
 COPY config ./config
 COPY tsconfig.json ./
 
-# Build
 RUN pnpm build
 
 # =============================================================================
 # Runtime stage
 # =============================================================================
-FROM node:20-alpine AS runtime
+FROM node:26-alpine AS runtime
 
 RUN apk add --no-cache \
     ffmpeg \
@@ -44,30 +30,25 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-# Copiar apenas o necessário
 COPY --from=base /app/node_modules ./node_modules
 COPY --from=base /app/dist ./dist
 COPY --from=base /app/package.json ./
 COPY --from=base /app/config ./config
 
-# Usuário não-root
-RUN addgroup -g 1000 -S skilluser && \
-    adduser -u 1000 -S skilluser -G skilluser && \
+RUN addgroup -g 1001 -S skilluser && \
+    adduser -u 1001 -S skilluser -G skilluser && \
     mkdir -p /data/skill /data/comfyui/output /data/comfyui/input /data/ffmpeg/temp && \
-    chown -R skilluser:skilluser /app /data
+    chown -R skilluser:skilluser /data
 
 USER skilluser
 
-# Variáveis de ambiente
 ENV NODE_ENV=production \
     SKILL_DATA_PATH=/data/skill \
     COMFYUI_OUTPUT_PATH=/data/comfyui/output \
     COMFYUI_INPUT_PATH=/data/comfyui/input \
     FFMPEG_TEMP_PATH=/data/ffmpeg/temp
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD node -e "import('./dist/skill-entry.js').then(m => m.skill.execute({action:'get-status',params:{}})).then(r => process.exit(r.success ? 0 : 1)).catch(() => process.exit(1))"
 
-# Entry point
 ENTRYPOINT ["node", "dist/skill-entry.js"]

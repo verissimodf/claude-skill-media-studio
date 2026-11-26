@@ -18,9 +18,9 @@
     }
   },
   "pipeline": {
-    "defaultImageModel": "flux1-dev-q4_k_m.gguf",
+    "defaultImageModel": "flux1-schnell-Q3_K_S.gguf",
     "defaultVideoModel": "wan2.1-i2v-14b-720p-Q4_K_M.gguf",
-    "defaultSteps": 20,
+    "defaultSteps": 4,
     "defaultCfg": 1.0,
     "defaultSampler": "euler",
     "defaultScheduler": "simple",

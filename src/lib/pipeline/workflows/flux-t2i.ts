@@ -6,12 +6,14 @@ export interface FluxT2iWorkflowOptions {
   clipName2?: string;
   vaeName?: string;
   guidance?: number;
+  clipDevice?: 'default' | 'cpu';
   projectId?: string;
 }
 
 /**
  * Workflow FLUX.1-dev GGUF (t2i) validado contra ComfyUI 0.46.2 no host 100.87.104.126.
- * Usa UnetLoaderGGUF + DualCLIPLoader (clip_l + t5xxl_fp8) + FluxGuidance + ae.safetensors.
+ * Usa UnetLoaderGGUF + DualCLIPLoader (clip_l + t5xxl_fp8, device=cpu para economizar VRAM)
+ * + FluxGuidance + ae.safetensors.
  */
 export function buildFluxGgufT2iWorkflow(
   params: GenerateImageParams,
@@ -22,6 +24,7 @@ export function buildFluxGgufT2iWorkflow(
   const clipName2 = options?.clipName2 ?? 't5xxl_fp8_e4m3fn.safetensors';
   const vaeName = options?.vaeName ?? 'ae.safetensors';
   const guidance = options?.guidance ?? 3.5;
+  const clipDevice = options?.clipDevice ?? 'cpu';
   const projectId = options?.projectId ?? 'default';
 
   const width = params.width ?? 1024;
@@ -43,6 +46,7 @@ export function buildFluxGgufT2iWorkflow(
         clip_name1: clipName1,
         clip_name2: clipName2,
         type: 'flux',
+        device: clipDevice,
       },
     },
     '3': {
