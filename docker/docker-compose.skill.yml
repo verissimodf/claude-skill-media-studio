@@ -1,0 +1,40 @@
+version: '3.8'
+
+# =============================================================================
+# docker-compose.skill.yml — Deploy containerizado da Claude Skill Media Studio
+# =============================================================================
+
+services:
+  media-studio-skill:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.skill
+    image: claude-skill-media-studio:latest
+    container_name: claude-skill-media-studio
+    env_file:
+      - ../.env
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - SKILL_DATA_PATH=/data/skill
+      - COMFYUI_OUTPUT_PATH=/data/comfyui/output
+      - COMFYUI_INPUT_PATH=/data/comfyui/input
+      - FFMPEG_TEMP_PATH=/data/ffmpeg/temp
+      - COMFYUI_ENDPOINT=${COMFYUI_ENDPOINT:-http://host.docker.internal:8188}
+      - ASSISTENTE_PESSOAL_BASE_URL=${ASSISTENTE_PESSOAL_BASE_URL:-https://jarvis.laytech.com.br}
+      - ASSISTENTE_PESSOAL_API_KEY=${ASSISTENTE_PESSOAL_API_KEY:-}
+    volumes:
+      - ${HOST_DATA_ROOT:-/mnt/data}/skill:/data/skill
+      - ${HOST_DATA_ROOT:-/mnt/data}/comfyui/output:/data/comfyui/output:ro
+      - ${HOST_DATA_ROOT:-/mnt/data}/comfyui/input:/data/comfyui/input
+      - ${HOST_DATA_ROOT:-/mnt/data}/ffmpeg/temp:/data/ffmpeg/temp
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    networks:
+      - skill-network
+
+networks:
+  skill-network:
+    name: skill-network
+    driver: bridge

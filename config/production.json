@@ -1,0 +1,20 @@
+{
+  "services": {
+    "comfyui": {
+      "endpoint": "http://localhost:8188",
+      "timeout": 300000,
+      "maxConcurrent": 2
+    },
+    "assistentePessoal": {
+      "baseUrl": "https://jarvis.laytech.com.br",
+      "timeout": 30000
+    },
+    "ffmpeg": {
+      "preset": "medium",
+      "crf": 18
+    }
+  },
+  "storage": {
+    "cleanupTempHours": 12
+  }
+}

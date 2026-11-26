@@ -1,0 +1,20 @@
+{
+  "services": {
+    "comfyui": {
+      "endpoint": "http://localhost:8188",
+      "timeout": 120000,
+      "maxConcurrent": 1
+    },
+    "ffmpeg": {
+      "preset": "ultrafast",
+      "crf": 23
+    }
+  },
+  "pipeline": {
+    "defaultSteps": 15
+  },
+  "discovery": {
+    "scanIntervalMs": 60000,
+    "healthCheckIntervalMs": 30000
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "name": "claude-skill-media-studio",
+  "version": "1.0.0",
+  "description": "Claude Skill para geração de imagens/vídeos (ComfyUI) + montagem (FFmpeg) + publicação social (AssistentePessoal)",
+  "type": "module",
+  "main": "dist/skill-entry.js",
+  "types": "dist/skill-entry.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/verissimodf/claude-skill-media-studio.git"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/skill-entry.ts",
+    "start": "node dist/skill-entry.js",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "test": "vitest run",
+    "test:unit": "vitest run --config vitest.unit.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "scan": "./scripts/host-scan.sh",
+    "scan:json": "./scripts/host-scan.sh --json",
+    "verify": "./scripts/verify-requirements.sh",
+    "setup:volumes": "./scripts/setup-volumes.sh",
+    "test:e2e": "./scripts/test-integration.sh",
+    "docker:build": "docker build -f docker/Dockerfile.skill -t claude-skill-media-studio .",
+    "docker:run": "docker compose -f docker/docker-compose.skill.yml up -d",
+    "docker:logs": "docker compose -f docker/docker-compose.skill.yml logs -f",
+    "docker:down": "docker compose -f docker/docker-compose.skill.yml down",
+    "prepare": "husky || true"
+  },
+  "keywords": [
+    "claude",
+    "skill",
+    "comfyui",
+    "ffmpeg",
+    "ai-generation",
+    "video-generation",
+    "image-generation",
+    "social-media",
+    "automation"
+  ],
+  "author": "verissimodf",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "dependencies": {
+    "axios": "^1.7.0",
+    "form-data": "^4.0.0",
+    "mime-types": "^2.1.35",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/mime-types": "^2.1.4",
+    "@types/node": "^20.12.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.5.0"
+  }
+}

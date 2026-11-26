@@ -1,0 +1,74 @@
+version: '3.8'
+
+# =============================================================================
+# docker-compose.host.yml — Serviços de apoio no host (opcional)
+# Use este se NÃO tiver ComfyUI/AssistentePessoal rodando separadamente
+# =============================================================================
+
+services:
+  # ComfyUI com GPU
+  comfyui:
+    image: comfyui/comfyui:latest
+    container_name: comfyui-host
+    environment:
+      - COMFYUI_ARGS=--listen 0.0.0.0 --port 8188 --output-directory /data/output --input-directory /data/input --enable-cors-header
+    volumes:
+      - ${HOST_DATA_ROOT:-/mnt/data}/comfyui/models:/data/models
+      - ${HOST_DATA_ROOT:-/mnt/data}/comfyui/output:/data/output
+      - ${HOST_DATA_ROOT:-/mnt/data}/comfyui/input:/data/input
+      - ${HOST_DATA_ROOT:-/mnt/data}/comfyui/custom_nodes:/data/custom_nodes
+    ports:
+      - "8188:8188"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8188/system_stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Redis para queue (opcional)
+  redis:
+    image: redis:7-alpine
+    container_name: skill-redis
+    volumes:
+      - ${HOST_DATA_ROOT:-/mnt/data}/redis:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # PostgreSQL para persistência avançada (opcional)
+  postgres:
+    image: postgres:16-alpine
+    container_name: skill-postgres
+    environment:
+      - POSTGRES_DB=skill_media
+      - POSTGRES_USER=skill
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-skill_secure_password}
+    volumes:
+      - ${HOST_DATA_ROOT:-/mnt/data}/postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skill -d skill_media"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  default:
+    name: skill-network
+    driver: bridge

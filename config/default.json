@@ -1,0 +1,69 @@
+{
+  "skill": {
+    "name": "claude-skill-media-studio",
+    "version": "1.0.0",
+    "description": "Skill para geração de imagens/vídeos via ComfyUI + montagem FFmpeg + publicação social via AssistentePessoal"
+  },
+  "host": {
+    "dataRoot": "/mnt/data",
+    "volumes": {
+      "skill": "skill",
+      "comfyuiModels": "comfyui/models",
+      "comfyuiOutput": "comfyui/output",
+      "comfyuiInput": "comfyui/input",
+      "comfyuiCustomNodes": "comfyui/custom_nodes",
+      "ffmpegTemp": "ffmpeg/temp"
+    }
+  },
+  "services": {
+    "comfyui": {
+      "endpoint": "http://localhost:8188",
+      "healthPath": "/system_stats",
+      "timeout": 300000,
+      "maxConcurrent": 2
+    },
+    "assistentePessoal": {
+      "baseUrl": "https://jarvis.laytech.com.br",
+      "healthPath": "/api/health",
+      "timeout": 30000,
+      "apiKeyEnv": "ASSISTENTE_PESSOAL_API_KEY"
+    },
+    "ffmpeg": {
+      "binary": "ffmpeg",
+      "tempDir": "/data/ffmpeg/temp",
+      "preset": "medium",
+      "crf": 20
+    }
+  },
+  "storage": {
+    "basePath": "/data/skill",
+    "maxFileSize": 2147483648,
+    "allowedExtensions": [".png", ".jpg", ".jpeg", ".webp", ".mp4", ".mov", ".webm", ".gif"],
+    "cleanupTempHours": 24
+  },
+  "pipeline": {
+    "defaultImageModel": "sd_xl_base_1.0.safetensors",
+    "defaultVideoModel": "svd_xt_1_1.safetensors",
+    "defaultWidth": 1024,
+    "defaultHeight": 1024,
+    "defaultVideoWidth": 1024,
+    "defaultVideoHeight": 576,
+    "defaultFps": 8,
+    "defaultDuration": 4,
+    "defaultSteps": 25,
+    "defaultCfg": 7,
+    "defaultSampler": "euler_ancestral",
+    "defaultScheduler": "normal"
+  },
+  "social": {
+    "platforms": ["instagram", "tiktok", "youtube", "facebook", "linkedin"],
+    "defaultAspectRatio": "9:16",
+    "defaultResolution": "1080x1920",
+    "maxCaptionLength": 2200
+  },
+  "discovery": {
+    "scanIntervalMs": 300000,
+    "healthCheckIntervalMs": 60000,
+    "criticalServices": ["comfyui", "assistente-pessoal", "ffmpeg"]
+  }
+}
