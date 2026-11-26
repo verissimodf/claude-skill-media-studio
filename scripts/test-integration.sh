@@ -51,7 +51,7 @@ main() {
     run_test "Service Discovery Script" "./scripts/host-scan.sh --json > /tmp/scan.json && jq -e '.services | length > 0' /tmp/scan.json" || failed=$((failed + 1))
 
     # 5. Verificar AssistentePessoal
-    run_test "AssistentePessoal Health" "curl -sf --max-time 10 https://jarvis.laytech.com.br/api/health | jq -e '.status == \"ok\" or .status == \"healthy\"'" || failed=$((failed + 1))
+    run_test "AssistentePessoal Health" "curl -sf --max-time 10 https://jarvis.laytech.com.br/api/health | jq -e '.ok == true or .status == \"ok\" or .status == \"healthy\"'" || failed=$((failed + 1))
 
     # 6. ComfyUI (se disponível)
     if curl -sf --max-time 5 http://localhost:8188/system_stats &>/dev/null; then

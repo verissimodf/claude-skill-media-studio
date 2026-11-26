@@ -1,9 +1,12 @@
 {
+  "host": {
+    "dataRoot": "/opt/laytech-ai/volumes"
+  },
   "services": {
     "comfyui": {
       "endpoint": "http://localhost:8188",
       "timeout": 300000,
-      "maxConcurrent": 2
+      "maxConcurrent": 1
     },
     "assistentePessoal": {
       "baseUrl": "https://jarvis.laytech.com.br",
@@ -13,6 +16,18 @@
       "preset": "medium",
       "crf": 18
     }
+  },
+  "pipeline": {
+    "defaultImageModel": "flux1-dev-q4_k_m.gguf",
+    "defaultVideoModel": "wan2.1-i2v-14b-720p-Q4_K_M.gguf",
+    "defaultSteps": 20,
+    "defaultCfg": 1.0,
+    "defaultSampler": "euler",
+    "defaultScheduler": "simple",
+    "defaultVideoWidth": 832,
+    "defaultVideoHeight": 480,
+    "defaultFps": 16,
+    "defaultDuration": 3
   },
   "storage": {
     "cleanupTempHours": 12

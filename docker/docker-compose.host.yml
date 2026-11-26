@@ -1,24 +1,70 @@
-version: '3.8'
-
 # =============================================================================
-# docker-compose.host.yml — Serviços de apoio no host (opcional)
-# Use este se NÃO tiver ComfyUI/AssistentePessoal rodando separadamente
+# docker-compose.host.yml — Integração com ComfyUI + Redis + Postgres no host
+# Adaptado para a topologia real do host 100.87.104.126 (app / laytech-ai):
+#   - ComfyUI existente na rede externa `AI_INTERNAL` (container `comfyui:8188`)
+#   - AssistentePessoal existente na rede externa `CNC_APP_PROD_01`
+#   - Volumes ComfyUI reais em `/opt/laytech-ai/volumes/comfyui/*`
+#   - Redis (porta host 6380) e Postgres (porta host 5434) dedicados à skill
+#     para evitar conflito com `laus_postgres` (5432) e `gbrain-postgres` (5433)
+#
+# Uso:
+#   # Conectar ao ComfyUI já rodando no host + subir Redis/Postgres da skill:
+#   docker compose -f docker/docker-compose.host.yml up -d
+#
+#   # Subir também um ComfyUI standalone (se NÃO houver container `comfyui` ativo):
+#   docker compose -f docker/docker-compose.host.yml --profile standalone-comfyui up -d
 # =============================================================================
 
 services:
-  # ComfyUI com GPU
-  comfyui:
-    image: comfyui/comfyui:latest
-    container_name: comfyui-host
+  # Skill Media Studio conectada às redes reais do host (AI_INTERNAL + CNC_APP_PROD_01)
+  media-studio-skill:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.skill
+    image: claude-skill-media-studio:latest
+    container_name: claude-skill-media-studio
     environment:
-      - COMFYUI_ARGS=--listen 0.0.0.0 --port 8188 --output-directory /data/output --input-directory /data/input --enable-cors-header
+      - NODE_ENV=${NODE_ENV:-production}
+      - SKILL_DATA_PATH=/data/skill
+      - COMFYUI_OUTPUT_PATH=/data/comfyui/output
+      - COMFYUI_INPUT_PATH=/data/comfyui/input
+      - FFMPEG_TEMP_PATH=/data/ffmpeg/temp
+      - COMFYUI_ENDPOINT=${COMFYUI_ENDPOINT:-http://comfyui:8188}
+      - ASSISTENTE_PESSOAL_BASE_URL=${ASSISTENTE_PESSOAL_BASE_URL:-https://jarvis.laytech.com.br}
+      - ASSISTENTE_PESSOAL_API_KEY=${ASSISTENTE_PESSOAL_API_KEY:-}
+      - REDIS_URL=redis://skill-redis:6379
+      - DATABASE_URL=postgresql://skill:${POSTGRES_PASSWORD:-skill_secure_password}@skill-postgres:5432/skill_media
     volumes:
-      - ${HOST_DATA_ROOT:-/mnt/data}/comfyui/models:/data/models
-      - ${HOST_DATA_ROOT:-/mnt/data}/comfyui/output:/data/output
-      - ${HOST_DATA_ROOT:-/mnt/data}/comfyui/input:/data/input
-      - ${HOST_DATA_ROOT:-/mnt/data}/comfyui/custom_nodes:/data/custom_nodes
+      - ${HOST_DATA_ROOT:-/opt/laytech-ai/volumes}/skill:/data/skill
+      - ${COMFYUI_VOLUMES_ROOT:-/opt/laytech-ai/volumes/comfyui}/output:/data/comfyui/output:ro
+      - ${COMFYUI_VOLUMES_ROOT:-/opt/laytech-ai/volumes/comfyui}/input:/data/comfyui/input
+      - ${HOST_DATA_ROOT:-/opt/laytech-ai/volumes}/ffmpeg/temp:/data/ffmpeg/temp
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      skill-redis:
+        condition: service_healthy
+      skill-postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - skill-network
+      - ai_internal
+      - cnc_app_prod
+
+  # ComfyUI opcional (profile standalone-comfyui) — desabilitado por padrão pois `comfyui` já roda em AI_INTERNAL
+  comfyui:
+    profiles: ["standalone-comfyui"]
+    image: yanwk/comfyui-boot:cu124-slim
+    container_name: comfyui-skill-standalone
+    environment:
+      - CLI_ARGS=--listen 0.0.0.0 --port 8188 --preview-method auto
+    volumes:
+      - ${COMFYUI_VOLUMES_ROOT:-/opt/laytech-ai/volumes/comfyui}/models:/root/ComfyUI/models
+      - ${COMFYUI_VOLUMES_ROOT:-/opt/laytech-ai/volumes/comfyui}/output:/root/ComfyUI/output
+      - ${COMFYUI_VOLUMES_ROOT:-/opt/laytech-ai/volumes/comfyui}/input:/root/ComfyUI/input
+      - ${COMFYUI_VOLUMES_ROOT:-/opt/laytech-ai/volumes/comfyui}/custom_nodes:/root/ComfyUI/custom_nodes
     ports:
-      - "8188:8188"
+      - "${COMFYUI_HOST_PORT:-8189}:8188"
     deploy:
       resources:
         reservations:
@@ -33,24 +79,29 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+    networks:
+      - skill-network
+      - ai_internal
 
-  # Redis para queue (opcional)
-  redis:
+  # Redis dedicado para filas da skill (porta host 6380 para evitar conflitos)
+  skill-redis:
     image: redis:7-alpine
     container_name: skill-redis
     volumes:
-      - ${HOST_DATA_ROOT:-/mnt/data}/redis:/data
+      - ${HOST_DATA_ROOT:-/opt/laytech-ai/volumes}/skill-redis:/data
     ports:
-      - "6379:6379"
+      - "127.0.0.1:${SKILL_REDIS_PORT:-6380}:6379"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 3
+    networks:
+      - skill-network
 
-  # PostgreSQL para persistência avançada (opcional)
-  postgres:
+  # PostgreSQL dedicado para persistência avançada da skill (porta host 5434)
+  skill-postgres:
     image: postgres:16-alpine
     container_name: skill-postgres
     environment:
@@ -58,17 +109,25 @@ services:
       - POSTGRES_USER=skill
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-skill_secure_password}
     volumes:
-      - ${HOST_DATA_ROOT:-/mnt/data}/postgres:/var/lib/postgresql/data
+      - ${HOST_DATA_ROOT:-/opt/laytech-ai/volumes}/skill-postgres:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${SKILL_POSTGRES_PORT:-5434}:5432"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U skill -d skill_media"]
       interval: 10s
       timeout: 5s
       retries: 3
+    networks:
+      - skill-network
 
 networks:
-  default:
+  skill-network:
     name: skill-network
     driver: bridge
+  ai_internal:
+    name: AI_INTERNAL
+    external: true
+  cnc_app_prod:
+    name: CNC_APP_PROD_01
+    external: true

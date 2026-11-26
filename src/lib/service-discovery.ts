@@ -141,11 +141,16 @@ export class ServiceDiscovery {
     const baseUrl = this.config.services.assistentePessoal.baseUrl.replace(/\/$/, '');
     const healthEndpoint = `${baseUrl}${this.config.services.assistentePessoal.healthPath}`;
     try {
-      const response = await axios.get<{ status?: string; version?: string }>(healthEndpoint, {
-        timeout: 8000,
-      });
-      const rawStatus = response.data?.status ?? 'unknown';
-      const isHealthy = rawStatus === 'ok' || rawStatus === 'healthy';
+      const response = await axios.get<{ ok?: boolean; status?: string; version?: string }>(
+        healthEndpoint,
+        {
+          timeout: 8000,
+        },
+      );
+      const rawStatus =
+        response.data?.status ?? (response.data?.ok === true ? 'ok' : 'unknown');
+      const isHealthy =
+        response.data?.ok === true || rawStatus === 'ok' || rawStatus === 'healthy';
       return {
         id: 'assistente-pessoal-jarvis',
         type: 'assistente-pessoal',

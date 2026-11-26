@@ -4,3 +4,4 @@ export * from './service-discovery.js';
 export * from './storage-adapter.js';
 export * from './assistente-pessoal-client.js';
 export * from './pipeline/orchestrator.js';
+export * from './pipeline/workflows/index.js';

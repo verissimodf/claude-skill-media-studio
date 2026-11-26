@@ -212,7 +212,8 @@ export interface SkillResponse<TData = unknown> {
 }
 
 export interface AssistenteHealthResponse {
-  status: string;
+  ok?: boolean;
+  status?: string;
   version?: string;
   uptime?: number;
   [key: string]: unknown;

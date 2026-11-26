@@ -1,9 +1,11 @@
 import { execFile } from 'node:child_process';
 import crypto from 'node:crypto';
+import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import axios, { type AxiosInstance } from 'axios';
+import FormData from 'form-data';
 import type { SkillConfig } from '../../config/schema.js';
 import type {
   AssembleVideoParams,
@@ -16,6 +18,8 @@ import type {
 } from '../../types/index.js';
 import type { AssistentePessoalClient } from '../assistente-pessoal-client.js';
 import type { LocalStorageAdapter } from '../storage-adapter.js';
+import { buildFluxGgufT2iWorkflow } from './workflows/flux-t2i.js';
+import { buildWan21I2vWorkflow } from './workflows/wan21-i2v.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -30,7 +34,11 @@ interface ComfyHistoryOutputItem {
 }
 
 interface ComfyHistoryEntry {
-  status?: { completed?: boolean; status_str?: string };
+  status?: {
+    completed?: boolean;
+    status_str?: string;
+    messages?: Array<[string, Record<string, unknown>]>;
+  };
   outputs?: Record<
     string,
     {
@@ -65,12 +73,17 @@ export class PipelineOrchestrator {
     if (params.workflow) return params.workflow;
 
     const p = this.config.pipeline;
+    const model = params.model ?? p.defaultImageModel;
+    if (model.toLowerCase().endsWith('.gguf') || model.toLowerCase().includes('flux')) {
+      return buildFluxGgufT2iWorkflow({ ...params, model }, { projectId });
+    }
+
     const seed = params.seed ?? Math.floor(Math.random() * 2_147_483_647);
 
     return {
       '1': {
         class_type: 'CheckpointLoaderSimple',
-        inputs: { ckpt_name: params.model ?? p.defaultImageModel },
+        inputs: { ckpt_name: model },
       },
       '2': {
         class_type: 'CLIPTextEncode',
@@ -122,12 +135,23 @@ export class PipelineOrchestrator {
     if (params.workflow) return params.workflow;
 
     const p = this.config.pipeline;
+    const model = params.model ?? p.defaultVideoModel;
+    if (
+      inputFilename &&
+      (model.toLowerCase().includes('wan') || model.toLowerCase().endsWith('.gguf'))
+    ) {
+      return buildWan21I2vWorkflow(
+        { ...params, model },
+        { inputImageFilename: inputFilename, projectId },
+      );
+    }
+
     const seed = params.seed ?? Math.floor(Math.random() * 2_147_483_647);
 
     return {
       '1': {
         class_type: 'CheckpointLoaderSimple',
-        inputs: { ckpt_name: params.model ?? p.defaultVideoModel },
+        inputs: { ckpt_name: model },
       },
       '2': inputFilename
         ? {
@@ -205,6 +229,19 @@ export class PipelineOrchestrator {
     return saved;
   }
 
+  async uploadImageToComfyUI(asset: MediaAsset): Promise<string> {
+    const form = new FormData();
+    form.append('image', fsSync.createReadStream(asset.absolutePath), {
+      filename: asset.filename,
+      contentType: asset.mimeType,
+    });
+    form.append('overwrite', 'true');
+    const response = await this.comfyHttp.post<{ name: string }>('/upload/image', form, {
+      headers: form.getHeaders(),
+    });
+    return response.data.name;
+  }
+
   async generateVideo(
     params: GenerateVideoParams,
     context?: SkillContext,
@@ -215,7 +252,7 @@ export class PipelineOrchestrator {
       if (!inputAsset) {
         throw new Error(`Input asset not found: ${params.inputAssetId}`);
       }
-      inputFilename = inputAsset.filename;
+      inputFilename = await this.uploadImageToComfyUI(inputAsset);
     }
 
     const workflow = this.buildVideoWorkflow(params, inputFilename, context?.projectId);
@@ -348,6 +385,13 @@ export class PipelineOrchestrator {
         `/history/${promptId}`,
       );
       const entry = historyRes.data[promptId];
+      if (entry?.status?.status_str === 'error') {
+        const errMsg = entry.status.messages?.find(([kind]) => kind === 'execution_error')?.[1];
+        const detail = errMsg
+          ? `${String(errMsg.node_type ?? 'node')}: ${String(errMsg.exception_message ?? 'unknown error').trim()}`
+          : 'ComfyUI execution_error';
+        throw new Error(`ComfyUI workflow failed (prompt_id=${promptId}): ${detail}`);
+      }
       if (entry?.outputs) {
         const items: ComfyHistoryOutputItem[] = [];
         for (const nodeOut of Object.values(entry.outputs)) {

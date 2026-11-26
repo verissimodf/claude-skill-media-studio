@@ -129,9 +129,11 @@ discover_docker() {
         fi
 
         local main_port=""
-        if [[ "$ports" =~ 0\.0\.0\.0:([0-9]+)-> ]]; then
-            main_port="${BASH_REMATCH[1]}"
-        elif [[ "$ports" =~ ([0-9]+)->([0-9]+) ]]; then
+        local re_bind='(0\.0\.0\.0|127\.0\.0\.1):([0-9]+)->'
+        local re_port='([0-9]+)->([0-9]+)'
+        if [[ "$ports" =~ $re_bind ]]; then
+            main_port="${BASH_REMATCH[2]}"
+        elif [[ "$ports" =~ $re_port ]]; then
             main_port="${BASH_REMATCH[1]}"
         fi
 
@@ -405,6 +407,9 @@ discover_volumes() {
         "/data/ffmpeg/temp:ffmpeg-temp"
         "/mnt/data/skill:skill-data-mnt"
         "/mnt/data/comfyui:comfyui-mnt"
+        "/opt/laytech-ai/volumes/comfyui/models:laytech-comfyui-models"
+        "/opt/laytech-ai/volumes/comfyui/output:laytech-comfyui-output"
+        "/opt/laytech-ai/volumes/comfyui/input:laytech-comfyui-input"
     )
 
     for entry in "${expected_paths[@]}"; do
@@ -471,10 +476,11 @@ check_assistente_pessoal() {
     response=$(curl -s -f --max-time 10 "$url" 2>/dev/null || echo "")
 
     if [[ -n "$response" ]] && echo "$response" | jq . &>/dev/null; then
-        local status version health
-        status=$(echo "$response" | jq -r '.status // "unknown"')
+        local status ok_flag version health
+        ok_flag=$(echo "$response" | jq -r '.ok // false')
+        status=$(echo "$response" | jq -r '.status // (if .ok == true then "ok" else "unknown" end)')
         version=$(echo "$response" | jq -r '.version // "unknown"')
-        health=$([[ "$status" == "ok" || "$status" == "healthy" ]] && echo "healthy" || echo "degraded")
+        health=$([[ "$ok_flag" == "true" || "$status" == "ok" || "$status" == "healthy" ]] && echo "healthy" || echo "degraded")
 
         SERVICES["assistente-pessoal-jarvis"]=$(jq -n \
             --arg id "assistente-pessoal-jarvis" \

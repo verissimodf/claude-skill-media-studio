@@ -10,7 +10,7 @@ describe('PipelineOrchestrator', () => {
   const assistente = new AssistentePessoalClient(config);
   const orchestrator = new PipelineOrchestrator(config, storage, assistente);
 
-  it('builds a valid default t2i ComfyUI workflow', () => {
+  it('builds a valid default SDXL t2i ComfyUI workflow', () => {
     const wf = orchestrator.buildImageWorkflow(
       {
         prompt: 'cyberpunk cityscape at night',
@@ -35,19 +35,58 @@ describe('PipelineOrchestrator', () => {
     expect(saveNode.inputs.filename_prefix).toBe('skill_proj_alpha');
   });
 
-  it('builds a valid i2v ComfyUI workflow when input filename is provided', () => {
-    const wf = orchestrator.buildVideoWorkflow(
-      { prompt: 'slow camera zoom', fps: 12, duration: 3, seed: 7 },
-      'frame_01.png',
-      'proj_vid',
+  it('builds a FLUX.1-dev GGUF workflow when .gguf model is selected', () => {
+    const wf = orchestrator.buildImageWorkflow(
+      {
+        prompt: 'studio portrait, dramatic rim light',
+        model: 'flux1-dev-q4_k_m.gguf',
+        width: 512,
+        height: 512,
+        steps: 12,
+        seed: 123,
+      },
+      'proj_flux',
     );
 
-    const loadNode = wf['2'] as { class_type: string; inputs: { image: string } };
-    const saveNode = wf['7'] as { inputs: { fps: number; filename_prefix: string } };
+    const unetNode = wf['1'] as { class_type: string; inputs: { unet_name: string } };
+    const guidanceNode = wf['5'] as { class_type: string; inputs: { guidance: number } };
+    const saveNode = wf['10'] as { inputs: { filename_prefix: string } };
 
+    expect(unetNode.class_type).toBe('UnetLoaderGGUF');
+    expect(unetNode.inputs.unet_name).toBe('flux1-dev-q4_k_m.gguf');
+    expect(guidanceNode.class_type).toBe('FluxGuidance');
+    expect(guidanceNode.inputs.guidance).toBe(3.5);
+    expect(saveNode.inputs.filename_prefix).toBe('skill_flux_proj_flux');
+  });
+
+  it('builds a Wan 2.1 I2V GGUF workflow when wan model and input image are provided', () => {
+    const wf = orchestrator.buildVideoWorkflow(
+      {
+        prompt: 'slow cinematic push-in, gentle wind',
+        model: 'wan2.1-i2v-14b-720p-Q4_K_M.gguf',
+        width: 832,
+        height: 480,
+        fps: 16,
+        duration: 2,
+        seed: 7,
+      },
+      'frame_01.png',
+      'proj_wan',
+    );
+
+    const unetNode = wf['1'] as { class_type: string; inputs: { unet_name: string } };
+    const loadNode = wf['5'] as { class_type: string; inputs: { image: string } };
+    const wanNode = wf['9'] as { class_type: string; inputs: { length: number } };
+    const combineNode = wf['12'] as { class_type: string; inputs: { format: string; frame_rate: number } };
+
+    expect(unetNode.class_type).toBe('UnetLoaderGGUF');
+    expect(unetNode.inputs.unet_name).toBe('wan2.1-i2v-14b-720p-Q4_K_M.gguf');
     expect(loadNode.class_type).toBe('LoadImage');
     expect(loadNode.inputs.image).toBe('frame_01.png');
-    expect(saveNode.inputs.fps).toBe(12);
-    expect(saveNode.inputs.filename_prefix).toBe('skill_vid_proj_vid');
+    expect(wanNode.class_type).toBe('WanImageToVideo');
+    expect((wanNode.inputs.length - 1) % 4).toBe(0);
+    expect(combineNode.class_type).toBe('VHS_VideoCombine');
+    expect(combineNode.inputs.format).toBe('video/h264-mp4');
+    expect(combineNode.inputs.frame_rate).toBe(16);
   });
 });
