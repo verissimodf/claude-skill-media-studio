@@ -5,6 +5,10 @@
   "type": "module",
   "main": "dist/skill-entry.js",
   "types": "dist/skill-entry.d.ts",
+  "bin": {
+    "claude-skill-media-studio": "dist/skill-entry.js",
+    "media-studio-mcp": "dist/mcp-server.js"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/verissimodf/claude-skill-media-studio.git"
@@ -13,6 +17,11 @@
     "build": "tsc",
     "dev": "tsx watch src/skill-entry.ts",
     "start": "node dist/skill-entry.js",
+    "mcp": "node dist/mcp-server.js",
+    "install:clients": "node scripts/install-clients.mjs --client all",
+    "install:claude": "node scripts/install-clients.mjs --client claude",
+    "install:chatgpt": "node scripts/install-clients.mjs --client chatgpt",
+    "install:opencode": "node scripts/install-clients.mjs --client opencode",
     "lint": "eslint src tests",
     "lint:fix": "eslint src tests --fix",
     "security:audit": "pnpm audit --audit-level=high",

@@ -20,7 +20,7 @@ Primeira release estável da **Claude Skill Media Studio**, integrando geração
 - **Scripts operacionais**: `host-scan.sh`, `verify-requirements.sh`, `setup-volumes.sh` e `test-integration.sh`.
 - **CI/CD (`.github/workflows/ci.yml`)**: lint, typecheck, testes unitários, build Docker e publicação automatizada.
 
-## Validação Real em Host (`100.87.104.126`)
+## Validação Real em Host (`127.0.0.1`)
 
 - `host-scan.sh --json`: 68 serviços descobertos (68 healthy, 0 degraded, 0 unreachable), incluindo `comfyui`, `AssistentePessoal (v1.12.1)` e `ffmpeg 8.0.1`.
 - `docker compose -f docker/docker-compose.host.yml config`: validado sem erros.

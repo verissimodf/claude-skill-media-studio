@@ -1,6 +1,6 @@
 # =============================================================================
 # docker-compose.host.yml — Integração com ComfyUI + Redis + Postgres no host
-# Adaptado para a topologia real do host 100.87.104.126 (app / laytech-ai):
+# Adaptado para a topologia do host local 127.0.0.1 (app / laytech-ai):
 #   - ComfyUI existente na rede externa `AI_INTERNAL` (container `comfyui:8188`)
 #   - AssistentePessoal existente na rede externa `CNC_APP_PROD_01`
 #   - Volumes ComfyUI reais em `/opt/laytech-ai/volumes/comfyui/*`

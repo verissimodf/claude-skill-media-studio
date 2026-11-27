@@ -12,7 +12,7 @@ Avaliação conduzida sob os protocolos **CyberSec Zero-Trust**, **Laytech Engin
 | **Alta** | Modelos `.safetensors` corrompidos no host (`<!doctype html>` salvo como arquivo binário de 320MB+) | Criado `scripts/verify-models.sh` para validação de cabeçalho binário `safetensors`/`GGUF` e re-download atômico com verificação pré-`mv` | Corrigido |
 | **Média** | Containers Docker sem `no-new-privileges` e `read_only` | Adicionados `security_opt: ["no-new-privileges:true"]`, `read_only: true` e `tmpfs: ["/tmp"]` em `docker-compose.host.yml` e `docker-compose.skill.yml` | Corrigido |
 | **Média** | `eslint@8.57.1` obsoleto e ausência de `pnpm audit` no CI | Migrado para `eslint@10` (flat config `eslint.config.mjs`), `typescript-eslint@8`, Node `26`, `pnpm@10` e adicionado `pnpm security:audit` no GitHub Actions | Corrigido |
-| **Baixa** | `docker.sock` montado diretamente (`:ro`) no container da skill | Documentada migração opcional para `tecnativa/docker-socket-proxy` (já ativo no host `100.87.104.126`) | Mitigado |
+| **Baixa** | `docker.sock` montado diretamente (`:ro`) no container da skill | Documentada migração opcional para `tecnativa/docker-socket-proxy` (ativo no host `127.0.0.1`) | Mitigado |
 
 ## Oportunidades de Detecção (Detection Engineering)
 

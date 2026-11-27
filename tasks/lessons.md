@@ -1,6 +1,6 @@
 # Engineering Lessons & Self-Correction Log
 
-## [2026-11-26] - Validação Real no Host 100.87.104.126 e Hardening Zero-Trust
+## [2026-11-26] - Validação Real no Host 127.0.0.1 e Hardening Zero-Trust
 
 - **Erro / Falha Detectada:**
   1. `AssistentePessoal` (`/api/health`) retornava `{"ok": true, "version": "1.12.1"}`, causando falso status `degraded`.

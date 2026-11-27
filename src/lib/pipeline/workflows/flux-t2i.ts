@@ -11,7 +11,7 @@ export interface FluxT2iWorkflowOptions {
 }
 
 /**
- * Workflow FLUX.1-dev GGUF (t2i) validado contra ComfyUI 0.46.2 no host 100.87.104.126.
+ * Workflow FLUX.1-dev GGUF (t2i) validado contra ComfyUI 0.46.2 no host 127.0.0.1.
  * Usa UnetLoaderGGUF + DualCLIPLoader (clip_l + t5xxl_fp8, device=cpu para economizar VRAM)
  * + FluxGuidance + ae.safetensors.
  */

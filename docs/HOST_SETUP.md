@@ -19,7 +19,7 @@ chmod +x scripts/*.sh
 
 ## 2. Volumes Persistentes
 
-No host de produção (`100.87.104.126`), os volumes do ComfyUI ficam em `/opt/laytech-ai/volumes/comfyui`. Para criar a árvore completa de volumes da skill:
+No host de produção (`127.0.0.1`), os volumes do ComfyUI ficam em `/opt/laytech-ai/volumes/comfyui`. Para criar a árvore completa de volumes da skill:
 
 ```bash
 sudo HOST_DATA_ROOT=/opt/laytech-ai/volumes ./scripts/setup-volumes.sh
