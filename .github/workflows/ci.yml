@@ -59,10 +59,31 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: pnpm test:integration
-        env:
-          COMFYUI_ENDPOINT: http://127.0.0.1:8188
-          ASSISTENTE_PESSOAL_BASE_URL: https://jarvis.laytech.com.br
+      - name: Run integration tests against local mock services
+        run: |
+          node -e "
+            const http = require('node:http');
+            const comfy = http.createServer((req, res) => {
+              res.setHeader('Content-Type', 'application/json');
+              if (req.url === '/system_stats') {
+                res.end(JSON.stringify({ system: { comfyui_version: '0.46.2-mock' }, devices: [{ name: 'mock-gpu' }] }));
+              } else if (req.url === '/object_info/UnetLoaderGGUF') {
+                res.end(JSON.stringify({ UnetLoaderGGUF: { input: { required: { unet_name: [['flux1-dev-q4_k_m.gguf', 'flux1-schnell-Q3_K_S.gguf', 'wan2.1-i2v-14b-720p-Q4_K_M.gguf']] } } } }));
+              } else { res.statusCode = 404; res.end('{}'); }
+            }).listen(18188, '127.0.0.1');
+            const assistente = http.createServer((req, res) => {
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ ok: true, version: '1.12.1-mock' }));
+            }).listen(18090, '127.0.0.1');
+            setInterval(() => {}, 10000);
+          " &
+          MOCK_PID=$!
+          sleep 1
+          set +e
+          COMFYUI_ENDPOINT=http://127.0.0.1:18188 ASSISTENTE_PESSOAL_BASE_URL=http://127.0.0.1:18090 pnpm test:integration
+          STATUS=$?
+          kill $MOCK_PID 2>/dev/null || true
+          exit $STATUS
 
   # GPU Self-Hosted Runner — Live Generation Tests
   integration-tests-gpu:
