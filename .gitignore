@@ -49,6 +49,12 @@ temp/
 *.tgz
 *.tar.gz
 
+# Local tooling & agents
+.gemini/
+.trail/
+AGENTS.md
+GEMINI.md
+
 # Misc
 *.pid
 *.seed
