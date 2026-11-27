@@ -1,5 +1,16 @@
 # Claude Skill Media Studio
 
+[![CI Status](https://github.com/verissimodf/claude-skill-media-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/verissimodf/claude-skill-media-studio/actions/workflows/ci.yml)
+[![NPM Version](https://img.shields.io/npm/v/claude-skill-media-studio?color=blue&logo=npm)](https://www.npmjs.com/package/claude-skill-media-studio)
+[![Node Version](https://img.shields.io/badge/node-%3E%3D26-green?logo=node.js)](https://nodejs.org/)
+[![PNPM Version](https://img.shields.io/badge/pnpm-%3E%3D10-orange?logo=pnpm)](https://pnpm.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Docker Pulls](https://img.shields.io/docker/pulls/verissimodf/claude-skill-media-studio?logo=docker)](https://hub.docker.com/r/verissimodf/claude-skill-media-studio)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Vitest](https://img.shields.io/badge/Tested%20with-Vitest-6E4C13?logo=vitest)](https://vitest.dev/)
+[![ESLint](https://img.shields.io/badge/ESLint-10-4B32C3?logo=eslint)](https://eslint.org/)
+[![Security Audit](https://img.shields.io/badge/Security-Audit-success?logo=github)](https://github.com/verissimodf/claude-skill-media-studio/security/advisories)
+
 > Skill para geração de imagens e vídeos via **ComfyUI** + montagem via **FFmpeg** + publicação social via **AssistentePessoal**
 
 ## 🎯 Visão Geral
@@ -188,7 +199,9 @@ Veja o guia detalhado em [docs/CLIENT_SETUP.md](docs/CLIENT_SETUP.md).
 
 ## 📚 Documentação
 
+- [Prompt de Instalação via Agente](INSTALL_PROMPT.md)
 - [Instalação em Claude Desktop, ChatGPT Desktop e OpenCode](docs/CLIENT_SETUP.md)
+- [Workflows ComfyUI de Exemplo](config/workflows/)
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [Setup do Host](docs/HOST_SETUP.md)
 - [Service Discovery](docs/SERVICE_DISCOVERY.md)

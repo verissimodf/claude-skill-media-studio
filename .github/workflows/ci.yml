@@ -5,6 +5,12 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_live_generation:
+        description: 'Run live generation tests (requires GPU runner)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -41,6 +47,66 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:unit
 
+  integration-tests:
+    name: Integration Tests (Mock)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm test:integration
+        env:
+          COMFYUI_ENDPOINT: http://127.0.0.1:8188
+          ASSISTENTE_PESSOAL_BASE_URL: https://jarvis.laytech.com.br
+
+  # GPU Self-Hosted Runner — Live Generation Tests
+  integration-tests-gpu:
+    name: Integration Tests (Live GPU)
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_live_generation == 'true'
+    runs-on: [self-hosted, linux, gpu, nvidia]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Verify GPU availability
+        run: |
+          nvidia-smi
+          docker run --rm --gpus all nvidia/cuda:12.0-base nvidia-smi
+      - name: Ensure ComfyUI is reachable
+        run: |
+          if ! curl -sf http://127.0.0.1:8188/system_stats >/dev/null 2>&1; then
+            docker compose -f docker/docker-compose.host.yml --profile standalone-comfyui up -d comfyui
+            sleep 15
+          fi
+          curl -sf http://127.0.0.1:8188/system_stats | jq .
+      - name: Run live integration tests
+        run: RUN_LIVE_GENERATION=true pnpm test:integration
+        env:
+          COMFYUI_ENDPOINT: http://127.0.0.1:8188
+          ASSISTENTE_PESSOAL_BASE_URL: https://jarvis.laytech.com.br
+          ASSISTENTE_PESSOAL_API_KEY: ${{ secrets.ASSISTENTE_PESSOAL_API_KEY }}
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          if-no-files-found: ignore
+          path: |
+            test-results/
+            coverage/
+          retention-days: 7
+
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
@@ -56,7 +122,7 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, unit-tests, docker-build]
+    needs: [lint-and-typecheck, unit-tests, integration-tests, docker-build]
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write

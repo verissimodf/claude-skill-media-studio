@@ -1,0 +1,126 @@
+{
+  "name": "Wan 2.1 I2V 14B 720p GGUF - Image-to-Video",
+  "description": "Wan 2.1 I2V 14B 720p GGUF (Q4_K_M) via WanImageToVideo + VHS_VideoCombine para MP4 H.264",
+  "model": "wan2.1-i2v-14b-720p-Q4_K_M.gguf",
+  "type": "i2v",
+  "workflow": {
+    "1": {
+      "class_type": "UnetLoaderGGUF",
+      "inputs": {
+        "unet_name": "wan2.1-i2v-14b-720p-Q4_K_M.gguf"
+      }
+    },
+    "2": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+        "type": "wan"
+      }
+    },
+    "3": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "wan_2.1_vae.safetensors"
+      }
+    },
+    "4": {
+      "class_type": "CLIPVisionLoader",
+      "inputs": {
+        "clip_name": "clip_vision_h.safetensors"
+      }
+    },
+    "5": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "{{INPUT_IMAGE}}"
+      }
+    },
+    "6": {
+      "class_type": "CLIPVisionEncode",
+      "inputs": {
+        "clip_vision": ["4", 0],
+        "image": ["5", 0],
+        "crop": "center"
+      }
+    },
+    "7": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "{{PROMPT}}",
+        "clip": ["2", 0]
+      }
+    },
+    "8": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "{{NEGATIVE_PROMPT}}",
+        "clip": ["2", 0]
+      }
+    },
+    "9": {
+      "class_type": "WanImageToVideo",
+      "inputs": {
+        "positive": ["7", 0],
+        "negative": ["8", 0],
+        "vae": ["3", 0],
+        "clip_vision_output": ["6", 0],
+        "start_image": ["5", 0],
+        "width": "{{WIDTH}}",
+        "height": "{{HEIGHT}}",
+        "length": "{{LENGTH}}",
+        "batch_size": 1
+      }
+    },
+    "10": {
+      "class_type": "KSampler",
+      "inputs": {
+        "seed": "{{SEED}}",
+        "steps": "{{STEPS}}",
+        "cfg": "{{CFG}}",
+        "sampler_name": "uni_pc",
+        "scheduler": "simple",
+        "denoise": 1.0,
+        "model": ["1", 0],
+        "positive": ["9", 0],
+        "negative": ["9", 1],
+        "latent_image": ["9", 2]
+      }
+    },
+    "11": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": ["10", 0],
+        "vae": ["3", 0]
+      }
+    },
+    "12": {
+      "class_type": "VHS_VideoCombine",
+      "inputs": {
+        "images": ["11", 0],
+        "frame_rate": "{{FPS}}",
+        "loop_count": 0,
+        "filename_prefix": "skill_wan_i2v_{{PROJECT_ID}}",
+        "format": "video/h264-mp4",
+        "pix_fmt": "yuv420p",
+        "crf": 19,
+        "save_metadata": true,
+        "trim_to_audio": false,
+        "pingpong": false,
+        "save_output": true
+      }
+    }
+  },
+  "parameters": {
+    "PROMPT": { "type": "string", "required": true },
+    "INPUT_IMAGE": { "type": "string", "required": true, "description": "Nome do arquivo de imagem no input/ do ComfyUI" },
+    "NEGATIVE_PROMPT": { "type": "string", "default": "low quality, blurry, distorted, ugly, flickering, jitter" },
+    "WIDTH": { "type": "integer", "default": 832 },
+    "HEIGHT": { "type": "integer", "default": 480 },
+    "LENGTH": { "type": "integer", "default": 49 },
+    "STEPS": { "type": "integer", "default": 20, "enum": [10, 15, 20, 25, 30] },
+    "CFG": { "type": "number", "default": 6.0, "enum": [3.0, 5.0, 6.0, 7.0, 10.0] },
+    "FPS": { "type": "integer", "default": 16, "enum": [8, 12, 16, 24] },
+    "SEED": { "type": "integer", "default": -1 },
+    "PROJECT_ID": { "type": "string", "default": "vid" }
+  }
+}
