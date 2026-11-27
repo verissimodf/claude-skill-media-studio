@@ -5,6 +5,12 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_live_generation:
+        description: 'Run live generation tests (requires GPU runner)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -41,6 +47,89 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:unit
 
+  integration-tests:
+    name: Integration Tests (Mock)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Run integration tests against local mock services
+        run: |
+          node -e "
+            const http = require('node:http');
+            const comfy = http.createServer((req, res) => {
+              res.setHeader('Content-Type', 'application/json');
+              if (req.url === '/system_stats') {
+                res.end(JSON.stringify({ system: { comfyui_version: '0.46.2-mock' }, devices: [{ name: 'mock-gpu' }] }));
+              } else if (req.url === '/object_info/UnetLoaderGGUF') {
+                res.end(JSON.stringify({ UnetLoaderGGUF: { input: { required: { unet_name: [['flux1-dev-q4_k_m.gguf', 'flux1-schnell-Q3_K_S.gguf', 'wan2.1-i2v-14b-720p-Q4_K_M.gguf']] } } } }));
+              } else { res.statusCode = 404; res.end('{}'); }
+            }).listen(18188, '127.0.0.1');
+            const assistente = http.createServer((req, res) => {
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ ok: true, version: '1.12.1-mock' }));
+            }).listen(18090, '127.0.0.1');
+            setInterval(() => {}, 10000);
+          " &
+          MOCK_PID=$!
+          sleep 1
+          set +e
+          COMFYUI_ENDPOINT=http://127.0.0.1:18188 ASSISTENTE_PESSOAL_BASE_URL=http://127.0.0.1:18090 pnpm test:integration
+          STATUS=$?
+          kill $MOCK_PID 2>/dev/null || true
+          exit $STATUS
+
+  # GPU Self-Hosted Runner — Live Generation Tests
+  integration-tests-gpu:
+    name: Integration Tests (Live GPU)
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_live_generation == 'true'
+    runs-on: [self-hosted, linux, gpu, nvidia]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Verify GPU availability
+        run: |
+          nvidia-smi
+          docker run --rm --gpus all nvidia/cuda:12.0-base nvidia-smi
+      - name: Ensure ComfyUI is reachable
+        run: |
+          if ! curl -sf http://127.0.0.1:8188/system_stats >/dev/null 2>&1; then
+            docker compose -f docker/docker-compose.host.yml --profile standalone-comfyui up -d comfyui
+            sleep 15
+          fi
+          curl -sf http://127.0.0.1:8188/system_stats | jq .
+      - name: Run live integration tests
+        run: RUN_LIVE_GENERATION=true pnpm test:integration
+        env:
+          COMFYUI_ENDPOINT: http://127.0.0.1:8188
+          ASSISTENTE_PESSOAL_BASE_URL: https://jarvis.laytech.com.br
+          ASSISTENTE_PESSOAL_API_KEY: ${{ secrets.ASSISTENTE_PESSOAL_API_KEY }}
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          if-no-files-found: ignore
+          path: |
+            test-results/
+            coverage/
+          retention-days: 7
+
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
@@ -56,7 +145,7 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, unit-tests, docker-build]
+    needs: [lint-and-typecheck, unit-tests, integration-tests, docker-build]
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write

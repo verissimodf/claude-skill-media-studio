@@ -1,0 +1,81 @@
+{
+  "name": "SVD-XT - Image-to-Video (Fallback)",
+  "description": "Stable Video Diffusion XT 1.1 para i2v rápido (25 frames, 1024x576)",
+  "model": "svd_xt_1_1.safetensors",
+  "type": "i2v",
+  "workflow": {
+    "1": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "ckpt_name": "svd_xt_1_1.safetensors"
+      }
+    },
+    "2": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "{{INPUT_IMAGE}}"
+      }
+    },
+    "3": {
+      "class_type": "VAEEncode",
+      "inputs": {
+        "pixels": ["2", 0],
+        "vae": ["1", 2]
+      }
+    },
+    "4": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "{{PROMPT}}",
+        "clip": ["1", 1]
+      }
+    },
+    "5": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "{{NEGATIVE_PROMPT}}",
+        "clip": ["1", 1]
+      }
+    },
+    "6": {
+      "class_type": "KSampler",
+      "inputs": {
+        "seed": "{{SEED}}",
+        "steps": "{{STEPS}}",
+        "cfg": "{{CFG}}",
+        "sampler_name": "euler_ancestral",
+        "scheduler": "karras",
+        "denoise": 1.0,
+        "model": ["1", 0],
+        "positive": ["4", 0],
+        "negative": ["5", 0],
+        "latent_image": ["3", 0]
+      }
+    },
+    "7": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": ["6", 0],
+        "vae": ["1", 2]
+      }
+    },
+    "8": {
+      "class_type": "SaveVideo",
+      "inputs": {
+        "filename_prefix": "skill_svd_{{PROJECT_ID}}",
+        "fps": "{{FPS}}",
+        "images": ["7", 0]
+      }
+    }
+  },
+  "parameters": {
+    "PROMPT": { "type": "string", "required": true },
+    "INPUT_IMAGE": { "type": "string", "required": true },
+    "NEGATIVE_PROMPT": { "type": "string", "default": "low quality, blurry, static" },
+    "STEPS": { "type": "integer", "default": 25, "enum": [15, 20, 25, 30] },
+    "CFG": { "type": "number", "default": 3.0, "enum": [2.0, 3.0, 4.0, 5.0] },
+    "FPS": { "type": "integer", "default": 7, "enum": [6, 7, 8, 10] },
+    "SEED": { "type": "integer", "default": -1 },
+    "PROJECT_ID": { "type": "string", "default": "svd" }
+  }
+}
