@@ -23,3 +23,20 @@
   - Nunca declarar senhas default em arquivos `docker-compose*.yml`.
 - **Evidência de Validação:**
   - `pnpm build`, `pnpm lint`, `pnpm test:unit`, `pnpm security:audit` e `RUN_LIVE_GENERATION=true pnpm test:integration` executados com sucesso.
+
+## [2026-11-27] - CI com Mock Services, Instalação de Binários Externos e GPU Runner
+
+- **Erro / Falha Detectada:**
+  1. No job de `Integration Tests (Mock)` do GitHub Actions (ubuntu-latest), o teste de integração `host-real.integration.test.ts` falhava com `AssertionError: expected 'unreachable' to be 'healthy'` para o serviço `ffmpeg`.
+  2. Chamadas para endpoints de terceiros sofriam 403 em runners públicos sem mock adequado.
+- **Causa Raiz:**
+  1. Ausência do binário nativo `ffmpeg` na imagem base padrão `ubuntu-latest`.
+  2. Asserção estrita de saúde de binários locais sem considerar ausência em ambientes conteinerizados efêmeros de CI.
+- **Ação Corretiva Implementada:**
+  1. Criação de mock servers HTTP locais inline no step de CI (ComfyUI na 18188 e AssistentePessoal na 18090).
+  2. Adição do step de instalação `sudo apt-get install -y -qq ffmpeg` no job `integration-tests`.
+  3. Tratamento defensivo em `host-real.integration.test.ts` verificando `process.env.CI` para binários ausentes.
+  4. Adição de job dedicado `integration-tests-gpu` configurado para runners `[self-hosted, linux, gpu, nvidia]`.
+- **Regra Preventiva (Anti-Repetição):**
+  - Todo job de CI que execute testes envolvendo binários do sistema operacional deve garantir instalação prévia no workflow.
+  - Testes em runners compartilhados devem depender exclusivamente de mocks locais herméticos; testes com hardware ou rede real devem ser restritos a dispatch ou runners self-hosted dedicados.
