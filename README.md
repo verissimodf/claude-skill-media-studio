@@ -171,8 +171,24 @@ const result = await handleSkillRequest({
 });
 ```
 
+## 🖥️ Instalação Rápida em Claude Desktop, ChatGPT Desktop e OpenCode
+
+O projeto inclui um servidor MCP nativo (`dist/mcp-server.js`) e um instalador multiplataforma em 1 comando:
+
+```bash
+pnpm build
+pnpm install:clients        # Configura Claude Desktop, OpenCode e gera preset do ChatGPT Desktop
+# Ou individualmente:
+pnpm install:claude         # Claude Desktop (claude_desktop_config.json)
+pnpm install:opencode       # OpenCode (~/.config/opencode/opencode.json)
+pnpm install:chatgpt        # ChatGPT Desktop (config/clients/chatgpt-desktop.mcp.json)
+```
+
+Veja o guia detalhado em [docs/CLIENT_SETUP.md](docs/CLIENT_SETUP.md).
+
 ## 📚 Documentação
 
+- [Instalação em Claude Desktop, ChatGPT Desktop e OpenCode](docs/CLIENT_SETUP.md)
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [Setup do Host](docs/HOST_SETUP.md)
 - [Service Discovery](docs/SERVICE_DISCOVERY.md)

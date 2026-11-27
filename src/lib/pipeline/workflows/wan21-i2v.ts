@@ -10,7 +10,7 @@ export interface Wan21I2vWorkflowOptions {
 }
 
 /**
- * Workflow Wan 2.1 I2V 14B 720p GGUF (i2v) validado contra ComfyUI 0.46.2 no host 100.87.104.126.
+ * Workflow Wan 2.1 I2V 14B 720p GGUF (i2v) validado contra ComfyUI 0.46.2 no host 127.0.0.1.
  * Usa UnetLoaderGGUF + CLIPLoader (umt5_xxl) + CLIPVisionLoader (clip_vision_h)
  * + WanImageToVideo + wan_2.1_vae + VHS_VideoCombine (h264-mp4).
  */
